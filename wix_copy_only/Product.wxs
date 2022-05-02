@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?define Pre_Manufacturer = "Elpusk" ?>
+<!-- Pre_Manufacturer name 은 Pre_Manufacturer 에 설정.-->
+<?define Pre_ProductName = "wix_copy_only"?>
+<!-- product name 은 Pre_ProductName 에 설정.-->
+
+<!-- Pre_ProductVersion 값이 변경되면, Pre_ProductCode 는 새로 생성해야함.-->
+<?define Pre_ProductVersion = "0.1.0"?>
+<?define Pre_ProductCode = "628AEB07-5DC7-4185-9BBD-8573341A723C"?>
+
+<!-- 같은 프로그래은 버전이 달라져도 Pre_ProductUpgradeCode 는 항상 동일해야 함.-->
+<?define Pre_ProductUpgradeCode = "20FF19C5-985C-43B4-BE58-D21D280F531F"?>
+
+<!-- 32비트면 Pre_PlatformPath 와 Pre_ProcessorArchitecture 값을 x86 으로 -->
+<!-- 64비트면 Pre_PlatformPath 와 Pre_ProcessorArchitecture 값을 x64 으로 -->
+<!-- Pre_ProcessorArchitecture 은 .NET 사용 할때만 의미 있음.-->
+<?define Pre_PlatformPath = "x86"?>
+<?define Pre_ProcessorArchitecture = "x86"?>
+<!-- msil , x86, x64 or ia64-->
+
+<!-- 1033(0x0409) en-US : English United States -->
+<!-- 1042(0x0412) ko-KR : Korean korea -->
+<?define Pre_LCID = "1033" ?>
+<!-- The decimal language ID (LCID) for the product. -->
+
+<?define Pre_HomePage = "https://blog.naver.com/elpusk" ?>
+
+<?if $(var.Pre_PlatformPath) = "x64" ?>
+<?define Pre_Win64 = "yes" ?>
+<!-- Win64 = "$(var.Pre_Win64)" -->
+<?else ?>
+<?define Pre_Win64 = "no" ?>
+<?endif ?>
+
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+  <Product
+    Id="$(var.Pre_ProductCode)"
+    Name="$(var.Pre_ProductName)"
+    Language="$(var.Pre_LCID)"
+    Version="$(var.Pre_ProductVersion)"
+    Manufacturer="$(var.Pre_Manufacturer)"
+    UpgradeCode="$(var.Pre_ProductUpgradeCode)"
+    >
+
+    <!-- InstallerVersion code : https://docs.microsoft.com/en-us/windows/win32/msi/released-versions-of-windows-installer -->
+    <Package
+      InstallerVersion="500"
+      Compressed="yes"
+      InstallScope="perMachine"
+      Comments="$(var.Pre_ProductName) v$(var.Pre_ProductVersion) Windows Installer Package $(var.Pre_PlatformPath)"
+      Platform="$(var.Pre_PlatformPath)"
+      />
+
+    <Media Id="1" Cabinet="$(var.TargetName).cab" EmbedCab="yes" />
+
+    <Upgrade Id="$(var.Pre_ProductUpgradeCode)">
+      <UpgradeVersion Minimum="$(var.Pre_ProductVersion)" OnlyDetect="yes" Property="NEWERVERSIONDETECTED"/>
+      <UpgradeVersion Minimum="0.0.0" Maximum="$(var.Pre_ProductVersion)" IncludeMinimum="yes" IncludeMaximum="no" Property="OLDERVERSIONBEINGUPGRADED"/>
+    </Upgrade>
+    <Condition Message="A newer version of this software is already installed.">NOT NEWERVERSIONDETECTED</Condition>
+
+    <Condition Message="This application is only supported on Windows 10 or higher.">
+      <![CDATA[Installed OR (VersionNT >= 603)]]>
+    </Condition>
+
+    <?if $(var.Pre_PlatformPath) = "x86" ?>
+    <WixVariable Id="DIR_BIN" Overridable="yes" Value="$(var.SolutionDir)wix_copy_only\binary_source\x86\"  />
+    <?else ?>
+    <WixVariable Id="DIR_BIN" Overridable="yes" Value="$(var.SolutionDir)wix_copy_only\binary_source\x64\"  />
+    <?endif ?>
+
+    <!-- UI part -->
+    
+    <!-- copy file part -->
+    <Feature 
+      Id="ProductFeature" 
+      Title="installation $(var.Pre_ProductName)" 
+      Description ="$(var.Pre_ProductName) v$(var.Pre_ProductVersion) software components" 
+      Level="1"
+      Absent ="disallow" 
+      AllowAdvertise ="no"
+      TypicalDefault ="install"
+      InstallDefault="local"
+      >
+			<ComponentGroupRef Id="ProductComponents" />
+		</Feature>
+
+    <InstallExecuteSequence>
+      <RemoveExistingProducts After="InstallValidate" Suppress="no"/>
+      <!-- InstallValidate : Verifies that all costed volumes have enough space for the installation. -->
+      <Custom Action="CA_CommitInstall" Before="InstallFinalize" >NOT Installed</Custom>
+      <Custom Action="CA_Rollback" After="InstallInitialize" >NOT Installed</Custom>
+      <!-- InstallValidate InstallInitialize InstallFiles -->
+    </InstallExecuteSequence>
+
+  </Product>
+
+  <!-- 
+    Built-in Variable SystemFolder is 
+    %windir%\System32 in 32 bits windows system.
+    %windir%\SysWOW64 in 64 bits windows system.( 32bits system32 path of 64 bits windows system )
+  -->
+  <Fragment>
+    <Directory Id="TARGETDIR" Name="SourceDir">
+    <Directory Id="SystemFolder"/>
+    </Directory>
+  </Fragment>
+  
+	<Fragment>
+    <!-- SystemFolder - gets the well-known folder for CSIDL_SYSTEMX86 on 64-bit Windows and CSIDL_SYSTEM on 32-bit Windows.-->
+		<ComponentGroup Id="ProductComponents" Directory="SystemFolder"> 
+      <Component Id="co_sd_helloworld.dll" Guid = "DF7AD7ED-A9BB-4CBA-AFEB-7AA57C28A463" Win64="$(var.Pre_Win64)" >
+        <File Id="file_sd_helloworld.dll" Name="sd_helloworld.dll" Source="!(wix.DIR_BIN)sd_helloworld.dll" KeyPath="yes" Checksum="yes" ProcessorArchitecture="$(var.Pre_ProcessorArchitecture)"/>
+      </Component>
+
+    </ComponentGroup>
+	</Fragment>
+
+  <!-- ======================================= -->
+  <!-- Custom action part -->
+  <!-- ======================================= -->
+  <Fragment>
+
+    <CustomAction Id="CA_CommitInstall" Execute="commit" Impersonate="no" Script="vbscript">
+      <!-- msgbox "CA1 commit - install" -->
+    </CustomAction>
+
+    <CustomAction Id="CA_Rollback" Execute="rollback" Script="vbscript">
+      <!-- msgbox "CA6 rollback" -->
+    </CustomAction>
+
+  </Fragment>
+
+</Wix>
